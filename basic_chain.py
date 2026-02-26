@@ -1,32 +1,35 @@
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.llms import HuggingFacePipeline
-from langchain_core.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
 
-# Load model
+# Load GPT-2
+model_name = "gpt2"
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
 pipe = pipeline(
     "text-generation",
-    model="google/flan-t5-base",
-    max_length=200
+    model=model,
+    tokenizer=tokenizer,
+    max_new_tokens=100,
+    do_sample=False
 )
 
 llm = HuggingFacePipeline(pipeline=pipe)
 
-# Create prompt
-prompt = PromptTemplate.from_template(
-    """
-You are a professional AI assistant.
-Answer clearly and concisely.
-
-Question: {question}
-Answer:
-"""
+# Prompt template
+prompt = PromptTemplate(
+    input_variables=["topic"],
+    template="Explain {topic} in simple words:"
 )
 
-# LCEL Chain (Modern Way)
-chain = prompt | llm
+# Create chain
+chain = LLMChain(llm=llm, prompt=prompt)
 
 # Run
-response = chain.invoke({"question": "What is an AI agent?"})
+response = chain.run("LangChain")
 
-print("\nResponse:\n")
+print("\nBasic Chain Response:\n")
 print(response)

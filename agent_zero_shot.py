@@ -1,53 +1,53 @@
-from transformers import pipeline
-
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 from langchain_community.llms import HuggingFacePipeline
 
-from langchain.agents import create_react_agent, AgentExecutor
-from langchain_core.tools import Tool
-from langchain.agents import initialize_agent, AgentType
+# =========================
+# 1️⃣ Load Small Instruction Model
+# =========================
 
-# Load local model
+model_name = "google/flan-t5-small"
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
 pipe = pipeline(
-    "text-generation",
-    model="google/flan-t5-base",
-    max_length=200
+    "text2text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    max_new_tokens=50,
+    do_sample=False,
 )
 
 llm = HuggingFacePipeline(pipeline=pipe)
 
-# Create calculator tool
-def calculator(expression: str):
+# =========================
+# 2️⃣ Define Tool Manually
+# =========================
+
+def multiply_numbers(input_text: str):
     try:
-        return str(eval(expression))
+        a, b = input_text.split("*")
+        return str(int(a.strip()) * int(b.strip()))
     except:
-        return "Invalid expression"
+        return "Invalid format. Use: 45 * 8"
 
-tools = [
-    Tool(
-        name="Calculator",
-        func=calculator,
-        description="Useful for solving math problems like 45*6 or 100/4"
-    )
-]
+# =========================
+# 3️⃣ Simple Tool Logic (NO Agent)
+# =========================
 
-# Initialize Zero-Shot Agent
-agent = initialize_agent(
-    tools,
-    llm,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True,
-    handle_parsing_errors=True
-)
+question = "What is 45 * 8?"
 
-print("🤖 Zero-Shot Agent Ready (type 'exit' to quit)\n")
+# Let model decide if multiplication exists
+if "*" in question:
+    expression = question.replace("What is", "").replace("?", "").strip()
+    result = multiply_numbers(expression)
+    final_answer = f"The answer is {result}"
+else:
+    final_answer = llm.invoke(question)
 
-while True:
-    user_input = input("You: ")
+# =========================
+# 4️⃣ Output
+# =========================
 
-    if user_input.lower() == "exit":
-        break
-
-    response = agent.run(user_input)
-
-    print("\nAI:", response)
-    print("-" * 50)
+print("\n✅ Final Answer:\n")
+print(final_answer)

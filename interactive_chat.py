@@ -1,40 +1,29 @@
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.llms import HuggingFacePipeline
-from langchain_core.prompts import PromptTemplate
 
-# Load model
+# Load GPT-2
+model_name = "gpt2"
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
 pipe = pipeline(
     "text-generation",
-    model="google/flan-t5-base",
-    max_length=200
+    model=model,
+    tokenizer=tokenizer,
+    max_new_tokens=100,
+    do_sample=False
 )
 
 llm = HuggingFacePipeline(pipeline=pipe)
 
-# Create prompt template
-prompt = PromptTemplate.from_template(
-    """
-You are a helpful AI assistant.
-Provide structured answers.
-
-Question: {question}
-Answer:
-"""
-)
-
-# Modern LCEL chain
-chain = prompt | llm
-
-print("🤖 LangChain Console Assistant (type 'exit' to quit)\n")
+print("Interactive Chat (type 'exit' to quit)\n")
 
 while True:
     user_input = input("You: ")
 
     if user_input.lower() == "exit":
-        print("Goodbye 👋")
         break
 
-    response = chain.invoke({"question": user_input})
-
-    print("\nAI:", response)
-    print("-" * 50)
+    response = llm.invoke(user_input + ":")
+    print("\nBot:", response, "\n")
